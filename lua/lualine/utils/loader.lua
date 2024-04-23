@@ -151,10 +151,10 @@ local function load_sections(sections, options)
   end
 end
 
----loads all the configs (active, inactive, tabline)
+---loads all the configs (active, inactive)
 ---@param config table user config
 local function load_components(config)
-  local sec_names = { 'sections', 'inactive_sections', 'tabline' }
+  local sec_names = { 'sections', 'inactive_sections' }
   for _, section in ipairs(sec_names) do
     load_sections(config[section], config.options)
   end

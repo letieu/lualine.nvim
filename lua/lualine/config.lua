@@ -20,7 +20,6 @@ local config = {
     globalstatus = vim.go.laststatus == 3,
     refresh = {
       statusline = 1000,
-      tabline = 1000,
     },
   },
   sections = {
@@ -39,7 +38,6 @@ local config = {
     lualine_y = {},
     lualine_z = {},
   },
-  tabline = {},
   extensions = {},
 }
 
@@ -99,7 +97,6 @@ local function apply_configuration(config_table)
   parse_sections('options')
   parse_sections('sections')
   parse_sections('inactive_sections')
-  parse_sections('tabline')
   if config_table.extensions then
     config.extensions = utils.deepcopy(config_table.extensions)
   end

@@ -209,11 +209,6 @@ local function get_extension_sections(current_ft, is_focused, sec_name)
   return nil
 end
 
----@return string statusline string for tabline
-local function tabline()
-  return statusline(config.tabline, 3)
-end
-
 local function notify_theme_error(theme_name)
   local message_template = theme_name ~= 'auto'
       and [[
@@ -305,7 +300,6 @@ end
 ---| 'window'
 ---@alias LualineRefreshOptsPlace
 ---| 'statusline'
----| 'tabline'
 ---@class LualineRefreshOpts
 ---@field scope LualineRefreshOptsKind
 ---@field place LualineRefreshOptsPlace[]
@@ -318,7 +312,7 @@ local function refresh(opts)
   end
   opts = vim.tbl_extend('keep', opts, {
     scope = 'tabpage',
-    place = { 'statusline', 'tabline' },
+    place = { 'statusline' },
     trigger = 'unknown',
   })
 
@@ -435,35 +429,6 @@ local function refresh(opts)
   refresh_real_curwin = nil
 end
 
---- Sets &tabline option to lualine
----@param hide boolean|nil if should hide tabline
-local function set_tabline(hide)
-  vim.loop.timer_stop(timers.tal_timer)
-  timers.halt_tal_refresh = true
-  vim.cmd([[augroup lualine_tal_refresh | exe "autocmd!" | augroup END]])
-  if not hide and next(config.tabline) ~= nil then
-    vim.loop.timer_start(
-      timers.tal_timer,
-      0,
-      config.options.refresh.tabline,
-      modules.utils.timer_call(timers.tal_timer, 'lualine_tal_refresh', function()
-        refresh { kind = 'tabpage', place = { 'tabline' }, trigger = 'timer' }
-      end, 3, 'lualine: Failed to refresh tabline')
-    )
-    modules.utils.define_autocmd(
-      default_refresh_events,
-      '*',
-      "call v:lua.require'lualine'.refresh({'kind': 'tabpage', 'place': ['tabline'], 'trigger': 'autocmd'})",
-      'lualine_tal_refresh'
-    )
-    modules.nvim_opts.set('showtabline', 2, { global = true })
-    timers.halt_tal_refresh = false
-  else
-    modules.nvim_opts.restore('tabline', { global = true })
-    modules.nvim_opts.restore('showtabline', { global = true })
-  end
-end
-
 --- Sets &statusline option to lualine
 --- adds auto command to redraw lualine on VimResized event
 ---@param hide boolean|nil if should hide statusline
@@ -520,7 +485,6 @@ end
 
 ---@alias LualineHideOptsPlace
 ---| 'statusline'
----| 'tabline'
 ---@class LualineHideOpts
 ---@field place LualineHideOptsPlace[]
 ---@field unhide boolean
@@ -530,12 +494,11 @@ local function hide(opts)
     opts = {}
   end
   opts = vim.tbl_extend('keep', opts, {
-    place = { 'statusline', 'tabline' },
+    place = { 'statusline' },
     unhide = false,
   })
   local hide_fn = {
     statusline = set_statusline,
-    tabline = set_tabline,
   }
   for _, place in ipairs(opts.place) do
     if hide_fn[place] then
@@ -580,7 +543,6 @@ local function setup(user_config)
     -- load components & extensions
     modules.loader.load_all(config)
     set_statusline()
-    set_tabline()
   end
   if package.loaded['lualine.utils.notices'] then
     modules.utils_notices.notice_message_startup()
@@ -590,7 +552,6 @@ end
 M = {
   setup = setup,
   statusline = status_dispatch('sections'),
-  tabline = tabline,
   get_config = modules.config_module.get_config,
   refresh = refresh,
   hide = hide,
