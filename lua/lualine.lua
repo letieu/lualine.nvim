@@ -188,27 +188,6 @@ local statusline = modules.utils.retry_call_wrap(function(sections, is_focused)
   return apply_transitional_separators(table.concat(status), is_focused)
 end)
 
---- check if any extension matches the filetype and return proper sections
----@param current_ft string : filetype name of current file
----@param is_focused boolean : whether being evaluated for focused window or not
----@return table|nil : (section_table) section config where components are replaced with
----      component objects
--- TODO: change this so it uses a hash table instead of iteration over list
---       to improve redraws. Add buftype / bufname for extensions
---       or some kind of cond ?
-local function get_extension_sections(current_ft, is_focused, sec_name)
-  for _, extension in ipairs(config.extensions) do
-    if vim.tbl_contains(extension.filetypes, current_ft) then
-      if is_focused then
-        return extension[sec_name]
-      else
-        return extension['inactive_' .. sec_name] or extension[sec_name]
-      end
-    end
-  end
-  return nil
-end
-
 local function notify_theme_error(theme_name)
   local message_template = theme_name ~= 'auto'
       and [[
@@ -284,12 +263,8 @@ local function status_dispatch(sec_name)
       -- disable on specific filetypes
       return nil
     end
-    local extension_sections = get_extension_sections(current_ft, is_focused, sec_name)
-    if extension_sections ~= nil then
-      retval = statusline(extension_sections, is_focused)
-    else
-      retval = statusline(config[(is_focused and '' or 'inactive_') .. sec_name], is_focused)
-    end
+
+    retval = statusline(config[(is_focused and '' or 'inactive_') .. sec_name], is_focused)
     return retval
   end
 end
@@ -540,7 +515,7 @@ local function setup(user_config)
     config = modules.config_module.apply_configuration(user_config)
     vim.cmd([[augroup lualine | exe "autocmd!" | augroup END]])
     setup_theme()
-    -- load components & extensions
+    -- load components
     modules.loader.load_all(config)
     set_statusline()
   end

@@ -160,49 +160,13 @@ local function load_components(config)
   end
 end
 
----loads all the extensions
----@param config table user config
-local function load_extensions(config)
-  local loaded_extensions = {}
-  local sec_names = { 'sections', 'inactive_sections' }
-  for _, extension in pairs(config.extensions) do
-    if type(extension) == 'string' then
-      local ok
-      ok, extension = pcall(require, 'lualine.extensions.' .. extension)
-      if not ok then
-        modules.notice.add_notice(string.format(
-          [[
-### Extensions
-Extension named `%s` was not found . Check if spelling is correct.
-]],
-          extension
-        ))
-      end
-    end
-    if type(extension) == 'table' then
-      local local_extension = modules.utils.deepcopy(extension)
-      for _, section in ipairs(sec_names) do
-        if local_extension[section] then
-          load_sections(local_extension[section], config.options)
-        end
-      end
-      if type(local_extension.init) == 'function' then
-        local_extension.init()
-      end
-      table.insert(loaded_extensions, local_extension)
-    end
-  end
-  config.extensions = loaded_extensions
-end
-
----loads sections and extensions or entire user config
+---loads sections or entire user config
 ---@param config table user config
 local function load_all(config)
   require('lualine.component')._reset_components()
   modules.fn_store.clear_fns()
   require('lualine.utils.nvim_opts').reset_cache()
   load_components(config)
-  load_extensions(config)
 end
 
 ---loads a theme from lua module
