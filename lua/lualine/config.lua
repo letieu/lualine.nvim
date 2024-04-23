@@ -14,7 +14,6 @@ local config = {
     section_separators = { left = '', right = '' },
     disabled_filetypes = {
       statusline = {},
-      winbar = {},
     },
     ignore_focus = {},
     always_divide_middle = true,
@@ -22,7 +21,6 @@ local config = {
     refresh = {
       statusline = 1000,
       tabline = 1000,
-      winbar = 1000,
     },
   },
   sections = {
@@ -42,8 +40,6 @@ local config = {
     lualine_z = {},
   },
   tabline = {},
-  winbar = {},
-  inactive_winbar = {},
   extensions = {},
 }
 
@@ -59,7 +55,7 @@ local function fix_separators(separators)
   return separators
 end
 
----copy raw disabled_filetypes to inner statusline & winbar tables.
+---copy raw disabled_filetypes to inner statusline tables.
 ---@param disabled_filetypes table
 ---@return table
 local function fix_disabled_filetypes(disabled_filetypes)
@@ -69,12 +65,8 @@ local function fix_disabled_filetypes(disabled_filetypes)
   if disabled_filetypes.statusline == nil then
     disabled_filetypes.statusline = {}
   end
-  if disabled_filetypes.winbar == nil then
-    disabled_filetypes.winbar = {}
-  end
   for k, disabled_ft in ipairs(disabled_filetypes) do
     table.insert(disabled_filetypes.statusline, disabled_ft)
-    table.insert(disabled_filetypes.winbar, disabled_ft)
     disabled_filetypes[k] = nil
   end
   return disabled_filetypes
@@ -103,17 +95,11 @@ local function apply_configuration(config_table)
       end
     end
   end
-  if vim.fn.has('nvim-0.8') == 0 and (next(config_table.winbar or {}) or next(config_table.inactive_winbar or {})) then
-    modules.utils_notices.add_notice('### winbar\nSorry `winbar can only be used in neovim 0.8 or higher.\n')
-    config_table.winbar = {}
-    config_table.inactive_winbar = {}
-  end
+
   parse_sections('options')
   parse_sections('sections')
   parse_sections('inactive_sections')
   parse_sections('tabline')
-  parse_sections('winbar')
-  parse_sections('inactive_winbar')
   if config_table.extensions then
     config.extensions = utils.deepcopy(config_table.extensions)
   end

@@ -157,7 +157,7 @@ end
 ---      component objects
 ---@param is_focused boolean : whether being evaluated for focused window or not
 ---@return string statusline string
-local statusline = modules.utils.retry_call_wrap(function(sections, is_focused, is_winbar)
+local statusline = modules.utils.retry_call_wrap(function(sections, is_focused)
   -- The sequence sections should maintain [SECTION_SEQUENCE]
   local section_sequence = { 'a', 'b', 'c', 'x', 'y', 'z' }
   local status = {}
@@ -181,7 +181,7 @@ local statusline = modules.utils.retry_call_wrap(function(sections, is_focused, 
       end
     end
   end
-  if applied_midsection_divider == false and config.options.always_divide_middle ~= false and not is_winbar then
+  if applied_midsection_divider == false and config.options.always_divide_middle ~= false then
     -- When non of section x,y,z is present
     table.insert(status, modules.highlight.format_highlight('c', is_focused) .. '%=')
   end
@@ -270,8 +270,6 @@ end
 
 ---@alias StatusDispatchSecs
 ---| 'sections'
----| 'winbar'
---- generates lualine.statusline & lualine.winbar function
 --- creates a closer that can draw sections of sec_name.
 ---@param sec_name StatusDispatchSecs
 ---@return function(focused:bool):string
@@ -293,9 +291,9 @@ local function status_dispatch(sec_name)
     end
     local extension_sections = get_extension_sections(current_ft, is_focused, sec_name)
     if extension_sections ~= nil then
-      retval = statusline(extension_sections, is_focused, sec_name == 'winbar')
+      retval = statusline(extension_sections, is_focused)
     else
-      retval = statusline(config[(is_focused and '' or 'inactive_') .. sec_name], is_focused, sec_name == 'winbar')
+      retval = statusline(config[(is_focused and '' or 'inactive_') .. sec_name], is_focused)
     end
     return retval
   end
@@ -308,7 +306,6 @@ end
 ---@alias LualineRefreshOptsPlace
 ---| 'statusline'
 ---| 'tabline'
----| 'winbar'
 ---@class LualineRefreshOpts
 ---@field scope LualineRefreshOptsKind
 ---@field place LualineRefreshOptsPlace[]
@@ -321,7 +318,7 @@ local function refresh(opts)
   end
   opts = vim.tbl_extend('keep', opts, {
     scope = 'tabpage',
-    place = { 'statusline', 'winbar', 'tabline' },
+    place = { 'statusline', 'tabline' },
     trigger = 'unknown',
   })
 
@@ -403,13 +400,13 @@ local function refresh(opts)
 
   -- gather which windows needs update
   if opts.scope == 'all' then
-    if vim.tbl_contains(opts.place, 'statusline') or vim.tbl_contains(opts.place, 'winbar') then
+    if vim.tbl_contains(opts.place, 'statusline') then
       wins = vim.tbl_filter(function(win)
         return vim.fn.win_gettype(win) ~= 'popup'
       end, vim.api.nvim_list_wins())
     end
   elseif opts.scope == 'tabpage' then
-    if vim.tbl_contains(opts.place, 'statusline') or vim.tbl_contains(opts.place, 'winbar') then
+    if vim.tbl_contains(opts.place, 'statusline') then
       wins = vim.tbl_filter(function(win)
         return vim.fn.win_gettype(win) ~= 'popup'
       end, vim.api.nvim_tabpage_list_wins(0))
@@ -431,26 +428,6 @@ local function refresh(opts)
       if stl_cur or stl_last then
         modules.nvim_opts.set('statusline', stl_cur, { window = set_win })
       end
-    end
-  end
-  if not timers.halt_wb_refresh and vim.tbl_contains(opts.place, 'winbar') then
-    for _, win in ipairs(wins) do
-      refresh_real_curwin = win
-      if vim.api.nvim_win_get_height(win) > 1 then
-        local wbr_cur = vim.api.nvim_win_call(refresh_real_curwin, M.winbar)
-        local wbr_last = modules.nvim_opts.get_cache('winbar', { window = win })
-        if wbr_cur or wbr_last then
-          modules.nvim_opts.set('winbar', wbr_cur, { window = win })
-        end
-      end
-    end
-  end
-  if not timers.halt_tal_refresh and vim.tbl_contains(opts.place, 'tabline') then
-    refresh_real_curwin = curwin
-    local tbl_cur = vim.api.nvim_win_call(curwin, tabline)
-    local tbl_last = modules.nvim_opts.get_cache('tabline', { global = true })
-    if tbl_cur or tbl_last then
-      modules.nvim_opts.set('tabline', tbl_cur, { global = true })
     end
   end
 
@@ -541,40 +518,9 @@ local function set_statusline(hide)
   end
 end
 
---- Sets &winbar option to lualine
----@param hide boolean|nil if should unset winbar
-local function set_winbar(hide)
-  vim.loop.timer_stop(timers.wb_timer)
-  timers.halt_wb_refresh = true
-  vim.cmd([[augroup lualine_wb_refresh | exe "autocmd!" | augroup END]])
-  if not hide and (next(config.winbar) ~= nil or next(config.inactive_winbar) ~= nil) then
-    vim.loop.timer_start(
-      timers.wb_timer,
-      0,
-      config.options.refresh.winbar,
-      modules.utils.timer_call(timers.wb_timer, 'lualine_wb_refresh', function()
-        refresh { kind = 'tabpage', place = { 'winbar' }, trigger = 'timer' }
-      end, 3, 'lualine: Failed to refresh winbar')
-    )
-    modules.utils.define_autocmd(
-      default_refresh_events,
-      '*',
-      "call v:lua.require'lualine'.refresh({'kind': 'tabpage', 'place': ['winbar'], 'trigger': 'autocmd'})",
-      'lualine_wb_refresh'
-    )
-    timers.halt_wb_refresh = false
-  elseif vim.fn.has('nvim-0.8') == 1 then
-    modules.nvim_opts.restore('winbar', { global = true })
-    for _, win in ipairs(vim.api.nvim_list_wins()) do
-      modules.nvim_opts.restore('winbar', { window = win })
-    end
-  end
-end
-
 ---@alias LualineHideOptsPlace
 ---| 'statusline'
 ---| 'tabline'
----| 'winbar'
 ---@class LualineHideOpts
 ---@field place LualineHideOptsPlace[]
 ---@field unhide boolean
@@ -584,13 +530,12 @@ local function hide(opts)
     opts = {}
   end
   opts = vim.tbl_extend('keep', opts, {
-    place = { 'statusline', 'tabline', 'winbar' },
+    place = { 'statusline', 'tabline' },
     unhide = false,
   })
   local hide_fn = {
     statusline = set_statusline,
     tabline = set_tabline,
-    winbar = set_winbar,
   }
   for _, place in ipairs(opts.place) do
     if hide_fn[place] then
@@ -636,7 +581,6 @@ local function setup(user_config)
     modules.loader.load_all(config)
     set_statusline()
     set_tabline()
-    set_winbar()
   end
   if package.loaded['lualine.utils.notices'] then
     modules.utils_notices.notice_message_startup()
@@ -649,7 +593,6 @@ M = {
   tabline = tabline,
   get_config = modules.config_module.get_config,
   refresh = refresh,
-  winbar = status_dispatch('winbar'),
   hide = hide,
 }
 
