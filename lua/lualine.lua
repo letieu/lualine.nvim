@@ -188,22 +188,6 @@ local statusline = modules.utils.retry_call_wrap(function(sections, is_focused)
   return apply_transitional_separators(table.concat(status), is_focused)
 end)
 
-local function notify_theme_error(theme_name)
-  local message_template = theme_name ~= 'auto'
-      and [[
-### options.theme
-Theme `%s` not found, falling back to `auto`. Check if spelling is right.
-]]
-    or [[
-### options.theme
-Theme `%s` failed, falling back to `gruvbox`.
-This shouldn't happen.
-Please report the issue at https://github.com/nvim-lualine/lualine.nvim/issues .
-Also provide what colorscheme you're using.
-]]
-  modules.utils_notices.add_notice(string.format(message_template, theme_name))
-end
-
 --- Sets up theme by defining hl groups and setting theme cache in 'highlight.lua'.
 --- Uses 'options.theme' variable to apply the theme:
 --- - If the value is a string, it'll load a theme of that name.
@@ -213,27 +197,6 @@ end
 --- Also sets up auto command to reload lualine on ColorScheme or background changes.
 local function setup_theme()
   local function get_theme_from_config()
-    local theme_name = config.options.theme
-    if type(theme_name) == 'string' then
-      local ok, theme = pcall(modules.loader.load_theme, theme_name)
-      if ok and theme then
-        return theme
-      end
-    elseif type(theme_name) == 'table' then
-      -- use the provided theme as-is
-      return config.options.theme
-    elseif type(theme_name) == 'function' then
-      -- call function and use returned (dynamic) theme as-is
-      return config.options.theme()
-    end
-    if theme_name ~= 'auto' then
-      notify_theme_error(theme_name)
-      local ok, theme = pcall(modules.loader.load_theme, 'auto')
-      if ok and theme then
-        return theme
-      end
-    end
-    notify_theme_error('auto')
     return modules.loader.load_theme('gruvbox')
   end
   local theme = get_theme_from_config()
